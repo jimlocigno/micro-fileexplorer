@@ -1,0 +1,43 @@
+VERSION = "0.1.0"
+
+local micro = import("micro")
+local config = import("micro/config")
+local os = import("os")
+local filepath = import("filepath")
+local ioutil = import("ioutil")
+
+function explorer(bp)
+    local dir = filepath.Dir(bp.Buf.Path)
+    local files, err = ioutil.ReadDir(dir)
+    if err then
+        micro.InfoBar():Error("Failed to read directory: " .. err)
+        return
+    end
+
+    local list = "Files in " .. dir .. ":\n"
+    local fileCount = files:Len()
+    for i = 0, fileCount - 1 do
+        local f = files:Index(i)
+        list = list .. (i + 1) .. ". " .. f.Name .. (f.IsDir and "/" or "") .. "\n"
+    end
+
+    micro.InfoBar():Message("Run :openfile <n> to open one")
+    explorer_files = files
+    explorer_dir = dir
+end
+function openfile(bp, args)
+    local index = tonumber(args[1])
+    if not index or not explorer_files or not explorer_files[index] then
+        micro.InfoBar():Error("Invalid file index")
+        return
+    end
+
+    local selected = explorer_files[index]
+    local fullpath = filepath.Join(explorer_dir, selected.Name)
+    bp:HSplitIndex(micro.OpenBuffer(fullpath), true)
+end
+
+function init()
+    config.MakeCommand("explorer", explorer, config.NoComplete)
+    config.MakeCommand("openfile", openfile, config.CompleteFiles)
+end
