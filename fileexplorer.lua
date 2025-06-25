@@ -12,46 +12,50 @@ function explorer(bp)
     local dir = filepath.Dir(path)
 
     local files, err = ioutil.ReadDir(dir)
-
     if not files then
-        micro.InfoBar:Error("ReadDir failed: " .. (err or "unknown"))
+        micro.InfoBar():Error("ReadDir failed: " .. (err or "unknown"))
         return
     end
 
-    local fileCount = #files
-    if fileCount == 0 then
-        micro.InfoBar:Message("Directory is empty.")
-        return
+    -- Separate dirs and files
+    local dirs, regular = {}, {}
+    for i = 1, #files do
+        local f = files[i]
+        if f:IsDir() then
+            table.insert(dirs, f)
+        else
+            table.insert(regular, f)
+        end
     end
 
-    local list = "Files in " .. dir .. ":\n"
-	for i = 1, fileCount do
-	    local f = files[i]
-	    if f then
-	        list = list .. i .. ". " .. f:Name() .. (f:IsDir() and "/" or "") .. "\n"
-	    end
-	end
-    list = list .. "\nType :openfile <n> to open one.\n"
+    -- Merge dirs and files into one list
+    local sorted = {}
+    for _, v in ipairs(dirs) do table.insert(sorted, v) end
+    for _, v in ipairs(regular) do table.insert(sorted, v) end
 
-	local newBuf = buffer.NewBuffer(list, "fileexplorer.list")
-    bp:VSplitIndex(newBuf, true)
-
-    explorer_files = files
+    explorer_files = sorted
     explorer_dir = dir
-end
 
-function openfile(bp, args)
-    local index = tonumber(args[1])
-    if not index or not explorer_files or not explorer_files[index] then
-        micro.InfoBar:Error("Invalid file index")
-        return
+    -- Build list
+    local list = "Files in " .. dir .. ":\n"
+    for i, f in ipairs(sorted) do
+        local label = ""
+        if f:IsDir() then
+            label = "[dir]  " .. f:Name() .. "/"
+        else
+            local size = f:Size()
+            local kb = string.format("%.1f KB", size / 1024)
+            label = string.format("       %-20s (%s)", f:Name(), kb)
+        end
+        list = list .. string.format("%2d. %s\n", i, label)
     end
 
-    local selected = explorer_files[index]
-    local fullpath = filepath.Join(explorer_dir, selected.Name)
-    bp:HSplitIndex(micro.OpenBuffer(fullpath), true)
+    -- Open in new vertical pane
+    local buf = buffer.NewBuffer(list, "filelist.txt")
+    bp:VSplitIndex(buf, true)
 end
 
+  
 function init()
     config.MakeCommand("explorer", explorer, config.NoComplete)
     config.MakeCommand("openfile", openfile, config.CompleteFiles)

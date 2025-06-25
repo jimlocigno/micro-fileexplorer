@@ -1,0 +1,8 @@
+Files in .:
+Files in .:
+
+ 1. [dir]  .git/
+ 2.        README.md            (0.2 KB)
+ 3.        fileexplorer.lua     (1.7 KB)
+ 4.        init.lua.save        (1.2 KB)
+ 5.        test.txt             (0.0 KB)
